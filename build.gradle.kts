@@ -12,7 +12,10 @@ repositories {
 }
 
 dependencies {
-    implementation("io.vertx:vertx-core:4.3.6")
+    val vertxVersion = "4.3.6"
+
+    implementation("io.vertx:vertx-core:$vertxVersion")
+    implementation("io.vertx:vertx-web:$vertxVersion")
     implementation("ch.qos.logback:logback-classic:1.4.4")
 }
 
