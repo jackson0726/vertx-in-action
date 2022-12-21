@@ -21,12 +21,27 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 /**
  * the main music-streaming logic and HTTP server interface for music players to connect to.
  */
 public class Jukebox extends AbstractVerticle {
+
+    public static void main(String[] args) {
+        Vertx vertx = Vertx.vertx();
+        vertx.deployVerticle(new Jukebox());
+        vertx.deployVerticle(new NetControl());
+    }
+
+    public static final String PREFIX = "jukebox";
+    public static final String LIST_CMD = "list";
+    public static final String SCHEDULE_CMD = "schedule";
+    public static final String PAUSE_CMD = "pause";
+    public static final String PLAY_CMD = "play";
+
+    public static final UnaryOperator<String> buildCmdEvent = cmd -> PREFIX + "." + cmd;
 
     private final Logger logger = LoggerFactory.getLogger(Jukebox.class);
 
@@ -41,10 +56,10 @@ public class Jukebox extends AbstractVerticle {
     @Override
     public void start(Promise<Void> startPromise) {
         EventBus eventBus = vertx.eventBus();
-        eventBus.consumer("jukebox.list", this::list);
-        eventBus.consumer("jukebox.schedule", this::schedule);
-        eventBus.consumer("jukebox.pause", this::pause);
-        eventBus.consumer("jukebox.play", this::play);
+        eventBus.consumer(buildCmdEvent.apply(LIST_CMD), this::list);
+        eventBus.consumer(buildCmdEvent.apply(SCHEDULE_CMD), this::schedule);
+        eventBus.consumer(buildCmdEvent.apply(PAUSE_CMD), this::pause);
+        eventBus.consumer(buildCmdEvent.apply(PLAY_CMD), this::play);
 
         var router = Router.router(vertx);
         router.route().handler(BodyHandler.create());
@@ -57,13 +72,90 @@ public class Jukebox extends AbstractVerticle {
                 .listen(8080)
                 .onComplete(res -> {
                     if (res.succeeded()) {
-                        logger.info("Open http://localhost:8080/");
+                        logger.info("Open Jukebox http://localhost:8080/");
+                        rateLimitedStreaming();
                         startPromise.complete();
                     } else {
                         logger.error("Start server failed", res.cause());
                         startPromise.fail(res.cause());
                     }
                 });
+    }
+
+    /**
+     * streamAudioChunk periodically pushes new MP3 data
+     * (100 ms is purely empirical, so feel free to adjust it).
+     */
+    private void rateLimitedStreaming() {
+        allPlaylist().onSuccess(pl -> {
+            currentMode = State.PLAYING;
+            playlist.addAll(pl);
+        });
+        vertx.setPeriodic(100, this::streamAudioChunk);
+    }
+
+    private Future<List<String>> allPlaylist() {
+        return playlist().future().map(pl ->
+                pl.getJsonArray("files").stream()
+                        .map(String.class::cast)
+                .collect(Collectors.toList())
+        );
+    }
+
+    private AsyncFile currentFile;
+    private long positionInFile;
+
+    private void streamAudioChunk(Long timer) {
+        if (currentMode == State.PAUSED) {
+            return;
+        }
+
+        if (currentFile == null && playlist.isEmpty()) {
+            currentMode = State.PAUSED;
+            return;
+        }
+
+        if (currentFile == null) {
+            openNextFile();
+        }
+
+        currentFile.read(Buffer.buffer(4096), 0, positionInFile, 4096, ar -> {
+           if (ar.succeeded()) {
+               processReadBuffer(ar.result());
+           } else {
+               logger.error("Read file failed", ar.cause());
+               closeCurrentFile();
+           }
+        });
+    }
+
+    private void processReadBuffer(Buffer buffer) {
+        positionInFile += buffer.length();
+        if (buffer.length() == 0) {
+            closeCurrentFile();
+            return;
+        }
+
+        for (HttpServerResponse streamer : streamers) {
+            if (!streamer.writeQueueFull()) {
+                streamer.write(buffer.copy()); // Buffers cannot be reused.
+            }
+        }
+    }
+
+    private void closeCurrentFile() {
+        positionInFile = 0;
+        currentFile.close();
+        currentFile = null;
+    }
+
+    private void openNextFile() {
+        OpenOptions options = new OpenOptions().setRead(true);
+        String track = playlist.poll();
+        logger.info("Open next: {}", track);
+        currentFile = vertx.fileSystem().openBlocking("tracks/" + track, options);
+        positionInFile = 0;
+        playlist.add(track);
     }
 
     private void playlist(RoutingContext context) {
@@ -122,7 +214,7 @@ public class Jukebox extends AbstractVerticle {
 
         file.endHandler(v -> response.end());
 
-        //file.pipeTo(response);
+//        file.pipeTo(response);
     }
 
     private void openAudioStream(RoutingContext context) {
@@ -179,11 +271,6 @@ public class Jukebox extends AbstractVerticle {
 
     private void play(Message<?> message) {
         currentMode = State.PLAYING;
-    }
-
-    public static void main(String[] args) {
-        Vertx vertx = Vertx.vertx();
-        vertx.deployVerticle(new Jukebox());
     }
 
 }
