@@ -4,11 +4,16 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import org.example.rx.ReactiveX;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 public class VertxCallbacks extends AbstractVerticle {
+
+    private final Logger logger = LoggerFactory.getLogger(ReactiveX.class);
 
     public static void main(String[] args) {
         Vertx vertx = Vertx.vertx();
@@ -27,8 +32,8 @@ public class VertxCallbacks extends AbstractVerticle {
         });
 
         Future<String> future = promise.future();
-        future.onSuccess(System.out::println)
-                .onFailure(err -> System.out.println(err.getMessage()));
+        future.onSuccess(logger::info)
+                .onFailure(err -> logger.error(err.getMessage()));
 
         promise.future()
                 .recover(err -> Future.succeededFuture("Let's say it's ok!"))
@@ -37,26 +42,27 @@ public class VertxCallbacks extends AbstractVerticle {
                     Promise<String> next = Promise.promise();
                     vertx.setTimer(3000, id -> next.complete(">>> " + str));
                     return next.future();
-                }).onSuccess(System.out::println);
+                }).onSuccess(logger::info);
 
         CompletionStage<String> cs = promise.future().toCompletionStage();
         cs.thenApply(String::toUpperCase) .thenApply(str -> "~~~ " + str) .whenComplete((str, err) -> {
             if (err == null) {
-                System.out.println(str);
+                logger.info(str);
             } else {
-                System.out.println("Oh... " + err.getMessage());
+                logger.error("Oh... " + err.getMessage());
             }
         });
 
         CompletableFuture<String> cf = CompletableFuture.supplyAsync(() -> {
             try { Thread.sleep(5000);
-            } catch (InterruptedException e) { e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
             return "5 seconds have elapsed";
         });
 
         Future.fromCompletionStage(cf, vertx.getOrCreateContext())
-                .onSuccess(System.out::println)
+                .onSuccess(logger::info)
                 .onFailure(Throwable::printStackTrace);
 
     }
