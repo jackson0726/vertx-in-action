@@ -118,6 +118,11 @@ public class Jukebox extends AbstractVerticle {
             openNextFile();
         }
 
+        if (currentTrack == null || currentTrack.endBuffer) {
+            currentMode = State.PAUSED;
+            return;
+        }
+
         currentTrack.file.read(Buffer.buffer(2048), 0, currentTrack.position, 2048, ar -> {
            if (ar.succeeded()) {
                processReadBuffer(ar.result());
@@ -154,6 +159,8 @@ public class Jukebox extends AbstractVerticle {
             var file = vertx.fileSystem().openBlocking("tracks/" + track.name, options);
             track.resetStream(file);
             this.currentTrack = track;
+        } else {
+            this.currentTrack = null;
         }
     }
 
