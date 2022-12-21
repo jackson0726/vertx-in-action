@@ -45,13 +45,15 @@ public class Jukebox extends AbstractVerticle {
 
     private final Logger logger = LoggerFactory.getLogger(Jukebox.class);
 
-    private enum State {PLAYING, PAUSED}
+    public enum State {PLAYING, PAUSED}
 
     private State currentMode = State.PAUSED;
 
-    private final Queue<String> playlist = new ArrayDeque<>();
+    private final Queue<Track> playlist = new ArrayDeque<>();
 
     private final Set<HttpServerResponse> streamers = new HashSet<>();
+
+    private Track currentTrack;
 
     @Override
     public void start(Promise<Void> startPromise) {
@@ -88,10 +90,10 @@ public class Jukebox extends AbstractVerticle {
      */
     private void rateLimitedStreaming() {
         allPlaylist().onSuccess(pl -> {
+            playlist.addAll(pl.stream().map(Track::new).collect(Collectors.toList()));
             currentMode = State.PLAYING;
-            playlist.addAll(pl);
+            vertx.setPeriodic(100, this::streamAudioChunk);
         });
-        vertx.setPeriodic(100, this::streamAudioChunk);
     }
 
     private Future<List<String>> allPlaylist() {
@@ -102,24 +104,21 @@ public class Jukebox extends AbstractVerticle {
         );
     }
 
-    private AsyncFile currentFile;
-    private long positionInFile;
-
     private void streamAudioChunk(Long timer) {
         if (currentMode == State.PAUSED) {
             return;
         }
 
-        if (currentFile == null && playlist.isEmpty()) {
+        if (currentTrack == null && playlist.isEmpty()) {
             currentMode = State.PAUSED;
             return;
         }
 
-        if (currentFile == null) {
+        if (currentTrack == null || currentTrack.endBuffer) {
             openNextFile();
         }
 
-        currentFile.read(Buffer.buffer(4096), 0, positionInFile, 4096, ar -> {
+        currentTrack.file.read(Buffer.buffer(2048), 0, currentTrack.position, 2048, ar -> {
            if (ar.succeeded()) {
                processReadBuffer(ar.result());
            } else {
@@ -130,9 +129,9 @@ public class Jukebox extends AbstractVerticle {
     }
 
     private void processReadBuffer(Buffer buffer) {
-        positionInFile += buffer.length();
-        if (buffer.length() == 0) {
-            closeCurrentFile();
+        currentTrack.updatePosition(buffer.length());
+        if (currentTrack.endBuffer) {
+            logger.info("end buffer of {}", currentTrack);
             return;
         }
 
@@ -144,18 +143,18 @@ public class Jukebox extends AbstractVerticle {
     }
 
     private void closeCurrentFile() {
-        positionInFile = 0;
-        currentFile.close();
-        currentFile = null;
+        currentTrack.end();
     }
 
     private void openNextFile() {
         OpenOptions options = new OpenOptions().setRead(true);
-        String track = playlist.poll();
-        logger.info("Open next: {}", track);
-        currentFile = vertx.fileSystem().openBlocking("tracks/" + track, options);
-        positionInFile = 0;
-        playlist.add(track);
+        Track track = playlist.poll();
+        if (track != null) {
+            logger.info("Open next: {}", track);
+            var file = vertx.fileSystem().openBlocking("tracks/" + track.name, options);
+            track.resetStream(file);
+            this.currentTrack = track;
+        }
     }
 
     private void playlist(RoutingContext context) {
@@ -218,6 +217,7 @@ public class Jukebox extends AbstractVerticle {
     }
 
     private void openAudioStream(RoutingContext context) {
+        logger.info("openAudioStream for a streamer");
         HttpServerRequest request = context.request();
         HttpServerResponse response = request.response()
                 .putHeader("Content-Type", "audio/mpeg")
@@ -262,7 +262,7 @@ public class Jukebox extends AbstractVerticle {
         if (playlist.isEmpty() && currentMode == State.PAUSED) {
             play(request);
         }
-        playlist.offer(file);
+        playlist.offer(new Track(file));
     }
 
     private void pause(Message<?> message) {
