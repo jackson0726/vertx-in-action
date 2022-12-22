@@ -23,11 +23,6 @@ public class HelloVerticle extends AbstractVerticle {
         logger.info("Open http://localhost:8080/");
     }
 
-    @Override
-    public void stop(Promise<Void> stopPromise) throws Exception {
-        super.stop(stopPromise);
-    }
-
     public static void main(String[] args) {
         Vertx vertx = Vertx.vertx();
         vertx.deployVerticle(new HelloVerticle());

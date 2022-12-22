@@ -28,7 +28,7 @@ public class HeatSensor extends AbstractVerticle {
     }
 
     private void scheduleNextUpdate() {
-        vertx.setTimer(random.nextInt(5000) + 1000, this::update);
+        vertx.setTimer(random.nextInt(5000) + 1000L, this::update);
     }
 
     private void update(long timerId) {

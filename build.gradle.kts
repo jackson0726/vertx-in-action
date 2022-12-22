@@ -18,9 +18,10 @@ dependencies {
     implementation("io.vertx:vertx-web:$vertxVersion")
     implementation("io.vertx:vertx-codegen:$vertxVersion")
     implementation("io.vertx:vertx-service-proxy:$vertxVersion")
+    implementation("io.vertx:vertx-infinispan:$vertxVersion")
 
-    implementation("ch.qos.logback:logback-classic:1.4.4")
     implementation("io.vertx:vertx-rx-java3:$vertxVersion")
+    implementation("ch.qos.logback:logback-classic:1.4.4")
 
     annotationProcessor("io.vertx:vertx-service-proxy:$vertxVersion")
     annotationProcessor("io.vertx:vertx-codegen:$vertxVersion:processor")
