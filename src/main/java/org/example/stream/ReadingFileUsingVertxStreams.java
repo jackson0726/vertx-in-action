@@ -1,4 +1,4 @@
-package org.example;
+package org.example.stream;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.file.AsyncFile;
