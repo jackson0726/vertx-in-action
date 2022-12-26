@@ -34,7 +34,7 @@ public class SensorDataServiceImpl implements SensorDataService {
 
     @Override
     public void valueFor(String sensorId, Handler<AsyncResult<JsonObject>> handler) {
-        logger.info("Value for sensor id = {}", sensorId);
+        logger.info("Value for sensor id = '{}'", sensorId);
         if (lastValues.containsKey(sensorId)) {
             JsonObject data = new JsonObject()
                     .put("sensorId", sensorId)

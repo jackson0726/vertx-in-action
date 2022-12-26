@@ -25,6 +25,7 @@ public class DataVerticle extends AbstractVerticle {
             }
         });
 
+        startPromise.complete();
     }
 
 }
