@@ -14,7 +14,7 @@ public class HttpServer extends AbstractVerticle {
     public void start() {
         vertx.createHttpServer()
                 .requestHandler(this::handler)
-                .listen(config().getInteger("port", 8080));
+                .listen(config().getInteger("port", 8082));
     }
 
     private void handler(HttpServerRequest request) {

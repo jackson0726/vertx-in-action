@@ -5,6 +5,8 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
+import org.example.eventbus.rpc.DataVerticle;
+import org.example.eventbus.rx.RxDataVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +23,8 @@ public class HeatSensor extends AbstractVerticle {
 
     public static void main(String[] args) {
 //        eventBus();
-        webClient();
+//        webClient();
+        vertxProxy();
     }
 
     public static void eventBus() {
@@ -49,14 +52,24 @@ public class HeatSensor extends AbstractVerticle {
 
         vertx.deployVerticle(SnapshotService.class.getName());
 
-//        vertx.deployVerticle(CollectorService.class.getName());
-        vertx.deployVerticle(RxCollectorService.class.getName());
+        vertx.deployVerticle(CollectorService.class.getName());
+//        vertx.deployVerticle(RxCollectorService.class.getName());
+
+    }
+
+    public static void vertxProxy() {
+        Vertx vertx = Vertx.vertx();
+        vertx.deployVerticle(HeatSensor.class.getName(), new DeploymentOptions().setInstances(4));
+        vertx.deployVerticle(Listener.class.getName());
+        vertx.deployVerticle(HttpServer.class.getName());
+//        vertx.deployVerticle(DataVerticle.class.getName());
+        vertx.deployVerticle(RxDataVerticle.class.getName());
 
     }
 
     @Override
     public void start() {
-        var port = config().getInteger("http.port", 3000);
+        var port = config().getInteger("http.port", 3001);
         vertx.createHttpServer()
                 .requestHandler(this::handleRequest)
                 .listen(port).onComplete(ar -> {
