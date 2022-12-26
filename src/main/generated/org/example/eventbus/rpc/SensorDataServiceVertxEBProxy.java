@@ -14,7 +14,7 @@
 * under the License.
 */
 
-package org.example.eventbus;
+package org.example.eventbus.rpc;
 
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.Vertx;
@@ -32,9 +32,9 @@ import io.vertx.serviceproxy.ServiceException;
 import io.vertx.serviceproxy.ServiceExceptionMessageCodec;
 import io.vertx.serviceproxy.ProxyUtils;
 
+import org.example.eventbus.rpc.SensorDataService;
 import io.vertx.core.Vertx;
 import io.vertx.core.AsyncResult;
-import org.example.eventbus.SensorDataService;
 import io.vertx.core.Handler;
 /*
   Generated Proxy code - DO NOT EDIT

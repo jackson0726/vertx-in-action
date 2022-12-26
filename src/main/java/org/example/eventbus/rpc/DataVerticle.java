@@ -1,4 +1,4 @@
-package org.example.eventbus;
+package org.example.eventbus.rpc;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
