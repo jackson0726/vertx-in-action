@@ -6,7 +6,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
 import org.example.eventbus.rpc.DataVerticle;
-import org.example.eventbus.rx.RxDataVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,8 +61,7 @@ public class HeatSensor extends AbstractVerticle {
         vertx.deployVerticle(HeatSensor.class.getName(), new DeploymentOptions().setInstances(4));
         vertx.deployVerticle(Listener.class.getName());
         vertx.deployVerticle(HttpServer.class.getName());
-//        vertx.deployVerticle(DataVerticle.class.getName());
-        vertx.deployVerticle(RxDataVerticle.class.getName());
+        vertx.deployVerticle(DataVerticle.class.getName());
 
     }
 

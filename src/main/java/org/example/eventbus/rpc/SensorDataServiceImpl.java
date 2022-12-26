@@ -24,12 +24,12 @@ public class SensorDataServiceImpl implements SensorDataService {
             lastValues.put(json.getString("id"), json.getDouble("temp"));
         });
 
-        vertx.eventBus().<JsonObject>consumer("sensor.average", message -> {
-            double avg = lastValues.values().stream()
-                    .collect(Collectors.averagingDouble(Double::doubleValue));
-            JsonObject json = new JsonObject().put("average", avg);
-            message.reply(json);
-        });
+//        vertx.eventBus().<JsonObject>consumer("sensor.average", message -> {
+//            double avg = lastValues.values().stream()
+//                    .collect(Collectors.averagingDouble(Double::doubleValue));
+//            JsonObject json = new JsonObject().put("average", avg);
+//            message.reply(json);
+//        });
     }
 
     @Override
