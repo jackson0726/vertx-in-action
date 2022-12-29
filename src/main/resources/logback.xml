@@ -1,11 +1,21 @@
 <configuration>
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>logs/abc.log</file>
+
         <encoder>
-            <pattern>%cyan(%d{yyyy-MM-dd HH:mm:ss.SSS})|%highlight(%-5level)|%cyan([%thread])|%magenta(%logger{36})| %msg%n%ex)</pattern>
+            <pattern>%date %level [%thread] %logger{10} [%file:%line] -%kvp- %msg%n</pattern>
         </encoder>
     </appender>
-    <logger name="io.netty" level="warn"/>
-    <root level="debug">
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} -%kvp- %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="info">
+        <appender-ref ref="FILE"/>
         <appender-ref ref="STDOUT"/>
     </root>
 </configuration>
